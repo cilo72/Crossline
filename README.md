@@ -680,7 +680,7 @@ On Windows, you can add the source code to a Visual Studio project to build or e
     clang -Wall crossline.c example2.c -o example2
     clang -Wall crossline.c example_sql.c -o example_sql
 
-## Bare Metal System
+## Bare Metal Systems
     For the usage on bare metal systems you must implement the following two functions:
  ```c
 extern int crossline_getch (void);
