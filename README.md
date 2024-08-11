@@ -31,7 +31,7 @@ When should you use Crossline:
 * [Extend Crossline](#Extend-Crossline)
 * [Customized Config](#Customized-Config)
 * [Build and Test](#build-and-Test)
-* [Bare Metal Systems](#Bare-metal-systems)
+* [Bare Metal Systems](#Bare-Metal-Systems)
 * [Related Projects](#Related-Projects)
 
 
