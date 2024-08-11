@@ -1,9 +1,11 @@
 # Crossline
 
+This is a fork of [Crossline](https://github.com/jcwangxp/Crossline/tree/master) wehere I added Bare Metal System support.
+
 **Crossline** is a small, self-contained, zero-config, MIT licensed, cross-platform, readline and libedit replacement.
 
 When should you use Crossline:
-* When you need a cross-platform readline: Windows, Linux, Unix, MacOS.
+* When you need a cross-platform readline: Windows, Linux, Unix, MacOS and Bare Metal Systems
 * When you need a simple but versatile readline: more shortcuts, advanced search, simple autocomplete, paging, cusor APIs, color APIs, embedded help, etc.
 * When you need a customized readline: easy to extend.
 * When you need a small readline to build into program.
@@ -29,6 +31,7 @@ When should you use Crossline:
 * [Extend Crossline](#Extend-Crossline)
 * [Customized Config](#Customized-Config)
 * [Build and Test](#build-and-Test)
+* [Bare Metal Systems](#Bare-metal-systems)
 * [Related Projects](#Related-Projects)
 
 
@@ -676,6 +679,15 @@ On Windows, you can add the source code to a Visual Studio project to build or e
     clang -Wall crossline.c example.c -o example
     clang -Wall crossline.c example2.c -o example2
     clang -Wall crossline.c example_sql.c -o example_sql
+
+## Bare Metal System
+    For the usage on bare metal systems you must implement the following two functions:
+ ```c
+extern int crossline_getch (void);
+extern int crossline_getch_timeout (uint32_t timeout_ms);
+```
+
+For compiling you must set the compiler flag **CROSS_EMBEDDED**.
 
 ## Related Projects
 

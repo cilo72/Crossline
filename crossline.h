@@ -82,6 +82,11 @@ extern void  crossline_delimiter_set (const char *delim);
 // Read a character from terminal without echo
 extern int	 crossline_getch (void);
 
+// Read a character from terminal without echo
+// In case of an timeout 0 is returned.
+#if CROSS_EMBEDDED
+extern int crossline_getch_timeout (uint32_t timeout_ms);
+#endif
 
 /* 
  * History APIs

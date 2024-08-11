@@ -54,6 +54,23 @@
 	#define strcasecmp				_stricmp
 	#define strncasecmp				_strnicmp
 	static int s_crossline_win = 1;
+#elif CROSS_EMBEDDED
+	#include <stdio.h>
+	#include <stdlib.h>
+	#include <string.h>
+	#include <errno.h>
+	#include <ctype.h>
+	#include <stdint.h>
+	#ifdef __ARMCC_VERSION
+		#include <rt_sys.h>
+		#define isatty(f) _sys_istty(f)
+		#define STDIN_FILENO 0
+		#define STDOUT_FILENO 1
+		#define EAGAIN 11 /* Try again */
+	#else
+		#include <unistd.h>
+	#endif
+	static int s_crossline_win = 0;
 #else
 	#include <unistd.h>
 	#include <termios.h>
@@ -71,14 +88,45 @@
 // Default word delimiters for move and cut
 #define CROSS_DFT_DELIMITER			" !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
 
-#define CROSS_HISTORY_MAX_LINE		256		// Maximum history line number
-#define CROSS_HISTORY_BUF_LEN		4096	// History line length
-#define CROSS_HIS_MATCH_PAT_NUM		16		// History search pattern number
+#ifdef CROSS_EMBEDDED
+  #ifndef CROSS_HISTORY_MAX_LINE
+		#define CROSS_HISTORY_MAX_LINE		10	// Maximum history line number
+	#endif
+	
+	#ifndef CROSS_HISTORY_BUF_LEN
+		#define CROSS_HISTORY_BUF_LEN			20	// History line length
+	#endif
+	
+	#ifndef CROSS_HIS_MATCH_PAT_NUM
+		#define CROSS_HIS_MATCH_PAT_NUM		16	// History search pattern number
+	#endif
 
-#define CROSS_COMPLET_MAX_LINE		1024	// Maximum completion word number
-#define CROSS_COMPLET_WORD_LEN		64		// Completion word length
-#define CROSS_COMPLET_HELP_LEN		256		// Completion word's help length
-#define CROSS_COMPLET_HINT_LEN		128		// Completion syntax hints length
+  #ifndef CROSS_COMPLET_MAX_LINE
+		#define CROSS_COMPLET_MAX_LINE		20	// Maximum completion word number
+	#endif
+	
+	#ifndef CROSS_COMPLET_WORD_LEN
+		#define CROSS_COMPLET_WORD_LEN		20	// Completion word length
+	#endif
+	
+	#ifndef CROSS_COMPLET_HELP_LEN
+		#define CROSS_COMPLET_HELP_LEN		20	// Completion word's help length
+	#endif
+	
+	#ifndef CROSS_COMPLET_HINT_LEN
+		#define CROSS_COMPLET_HINT_LEN		20	// Completion syntax hints length
+	#endif
+
+#else
+	#define CROSS_HISTORY_MAX_LINE		256		// Maximum history line number
+	#define CROSS_HISTORY_BUF_LEN		4096	// History line length
+	#define CROSS_HIS_MATCH_PAT_NUM		16		// History search pattern number
+
+	#define CROSS_COMPLET_MAX_LINE		1024	// Maximum completion word number
+	#define CROSS_COMPLET_WORD_LEN		64		// Completion word length
+	#define CROSS_COMPLET_HELP_LEN		256		// Completion word's help length
+	#define CROSS_COMPLET_HINT_LEN		128		// Completion syntax hints length
+#endif
 
 // Make control-characters readable
 #define CTRL_KEY(key)				(key - 0x40)
@@ -495,8 +543,13 @@ void  crossline_prompt_color_set (crossline_color_e color)
 
 void crossline_screen_clear ()
 {
+	#ifdef CROSS_EMBEDDED
+	printf ("\e[2J");
+	printf ("\e[H");
+	#else
 	int ret = system (s_crossline_win ? "cls" : "clear");
 	(void) ret;
+	#endif
 }
 
 #ifdef _WIN32	// Windows
@@ -591,6 +644,59 @@ void crossline_color_set (crossline_color_e color)
 
 #else // Linux
 
+#ifdef CROSS_EMBEDDED
+
+void crossline_screen_get (int *pRows, int *pCols)
+{
+	//Store cursor position
+	printf("\e7");
+	fflush(stdout);
+
+	crossline_cursor_set(999, 999);
+	if(crossline_cursor_get(pRows, pCols) == 0)
+	{
+		(*pRows)++; 
+		(*pCols)++;
+	}
+	else
+	{
+		*pCols =  80;
+		*pRows =  24;
+	}
+	//Restore cursor position
+	printf("\e8");
+	fflush(stdout);
+}
+
+int crossline_cursor_get (int *pRow, int *pCol)
+{
+	int i;
+	char buf[32];
+	printf ("\e[6n");
+	fflush(stdout);
+	for (i = 0; i < (char)sizeof(buf)-1; ++i) {
+		buf[i] = (char)crossline_getch_timeout (100);
+		if(buf[i] == 0)
+		{
+			return -1;
+		}
+		if ('R' == buf[i]) { break; }
+	}
+	buf[i] = '\0';
+	if (2 != sscanf (buf, "\e[%d;%dR", pRow, pCol)) 
+	{ 
+		return -1; 
+	}
+	(*pRow)--; (*pCol)--;
+	return 0;
+}
+
+// You must implement this two functions on your own
+// int crossline_getch (void);
+// int crossline_getch_timeout (uint32_t timeout_ms);
+
+#else
+
 int crossline_getch ()
 {
 	char ch = 0;
@@ -615,6 +721,7 @@ void crossline_screen_get (int *pRows, int *pCols)
 	*pCols = *pCols > 1 ? *pCols : 160;
 	*pRows = *pRows > 1 ? *pRows : 24;
 }
+
 int crossline_cursor_get (int *pRow, int *pCol)
 {
 	int i;
@@ -629,9 +736,13 @@ int crossline_cursor_get (int *pRow, int *pCol)
 	(*pRow)--; (*pCol)--;
 	return 0;
 }
+
+#endif
+
 void crossline_cursor_set (int row, int col)
 {
 	printf("\e[%d;%dH", row+1, col+1);
+	fflush(stdout);
 }
 void crossline_cursor_move (int row_off, int col_off)
 {
@@ -643,6 +754,7 @@ void crossline_cursor_move (int row_off, int col_off)
 void crossline_cursor_hide (int bHide)
 {
 	printf("\e[?25%c", bHide?'l':'h');
+	fflush(stdout);
 }
 
 void crossline_color_set (crossline_color_e color)
@@ -1031,6 +1143,11 @@ static int crossline_getkey (int *is_esc)
 	return ch;
 }
 
+#ifdef CROSS_EMBEDDED
+
+static void crossline_winchg_reg (void) {}
+
+#else
 static void crossline_winchg_event (int arg)
 { s_got_resize = 1; }
 static void crossline_winchg_reg (void)
@@ -1042,6 +1159,7 @@ static void crossline_winchg_reg (void)
 	sigaction (SIGWINCH, &sa, NULL);
 	s_got_resize = 0;
 }
+#endif
 
 #endif // #ifdef _WIN32
 
@@ -1411,8 +1529,10 @@ static char* crossline_readline_edit (char *buf, int size, const char *prompt, i
 
 		case CTRL_KEY('Z'):
 #ifndef _WIN32
+	#ifndef CROSS_EMBEDDED
 			raise(SIGSTOP);    // Suspend current process
 			crossline_print (prompt, buf, &pos, &num, pos, num);
+	#endif
 #endif
 			break;
 
